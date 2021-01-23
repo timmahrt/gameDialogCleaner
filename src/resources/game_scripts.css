@@ -1,0 +1,74 @@
+
+.title {
+  font-size: 25px;
+  padding-top: 25px;
+  padding-bottom: 10px;
+}
+.content {
+  max-width: 800px;
+  margin: auto;
+}
+.speaker_a {
+  background-color: powderblue;
+}
+.speaker_b {
+  background-color: lightgray;
+}
+.context {
+  background-color: palegreen;
+  
+}
+.choice {
+  background-color: #F9FF9F; /* Yellow */
+  
+}
+.main_content {
+	width: 800px;
+	margin: auto;
+}
+.script_section {
+	padding-top: 40px;
+	width: 800px;
+	border-spacing: 0;
+	table-layout: fixed;
+	overflow-wrap: break-word;
+}
+.script_section_row {
+	margin: 5px;
+	padding: 0px;
+	width: 100%;
+}
+.script_section_row_speaker {
+	width: 15%;
+}
+.script_section_row_source {
+	width: 40%;
+}
+.script_section_row_translation {
+	width: 40%;
+}
+.dialog_cell {
+	border: 1px;
+	border-style: solid;
+}
+.link_row {
+	padding: 10px;
+}
+.link_home {
+	width: 400px;
+	margin: auto;
+}
+.title {
+	width: 400px;
+	margin: auto;
+}
+.spaced_list {
+	margin-bottom: 10px;
+}
+.script_link {
+	display: inline-block;
+}
+.script_length_info {
+	display: inline-block;
+	width: 100px;
+}
