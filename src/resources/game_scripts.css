@@ -19,7 +19,7 @@
   
 }
 .choice {
-  background-color: #F9FF9F; /* Yellow */
+  background-color: #F9FF9F; /* Pale Yellow */
   
 }
 .main_content {
@@ -71,4 +71,7 @@
 .script_length_info {
 	display: inline-block;
 	width: 100px;
+}
+.game_script_table {
+    border-spacing: 10px;
 }
