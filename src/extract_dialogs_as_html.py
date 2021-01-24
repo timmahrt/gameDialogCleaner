@@ -35,48 +35,64 @@ def extractDialog(rootDir):
             for line in sentenceList:
                 fd.write(line + '\n')
 
-class PageBuilder:
+class Builder:
 
     SPEAKER_A = 'speaker_a'
     SPEAKER_B = 'speaker_b'
+    SPEAKER = 'speaker'
     CONTEXT = 'context'
     CHOICE = 'choice'
 
-    def buildSection(self, textList, sectionId):
-        rowList = []
-        speakerClass = PageBuilder.CONTEXT
-        for speechId, line in enumerate(textList):
-            if ':' in line:
-                speaker, line = line.split(':', 1)
-                speaker = speaker.strip()
-                # line = line.lstrip('「').rstrip('」')
+    def splitSpeakerAndSpeech(self, line):
+        if ':' in line:
+            speaker, line = line.split(':', 1)
+            speaker = speaker.strip()
+        else:
+            speaker = ''
+
+        return speaker, line
+
+    def getSpeakerClass(self, line, speaker, prevSpeakerClass):
+        speakerClass = Builder.SPEAKER_A
+        if self.isContext(line):
+            speakerClass = Builder.CONTEXT
+        elif self.isChoice(line):
+            speakerClass = Builder.CHOICE
+        elif prevSpeakerClass in [Builder.CONTEXT, Builder.CHOICE]:
+            speakerClass = Builder.SPEAKER_A
+        elif speaker != '':
+            if prevSpeakerClass == Builder.SPEAKER_A:
+                speakerClass = Builder.SPEAKER_B
             else:
-                speaker = ''
+                speakerClass = Builder.SPEAKER_A
+        # try:
+        #     print(line, '"%s"' % speaker, speakerClass, prevSpeakerClass)
+        # except:
+        #     print(line, '"%s"' % speaker, prevSpeakerClass)
+        #     raise
+        return speakerClass
 
-            if self.isContext(line):
-                speakerClass = PageBuilder.CONTEXT
-            elif self.isChoice(line):
-                speakerClass = PageBuilder.CHOICE
-            elif speakerClass in [PageBuilder.CONTEXT, PageBuilder.CHOICE]:
-                speakerClass = PageBuilder.SPEAKER_A
-            elif speaker != '':
-                if speakerClass == PageBuilder.SPEAKER_A:
-                    speakerClass = PageBuilder.SPEAKER_B
-                else:
-                    speakerClass = PageBuilder.SPEAKER_A
-
-            rowId = 'row_%03d_%02d' % (sectionId, speechId)
-            rowList.append(self._makeRow(speakerClass, speaker, line, rowId))
-
-        rowsText = "".join(rowList)
-
-        return self._makeSection(rowsText)
 
     def isContext(self, line):
         return '＋＋' in line
 
     def isChoice(self, line):
         return line.startswith('○')
+
+class PageBuilder(Builder):
+
+    def buildSection(self, textList, sectionId):
+        rowList = []
+        speakerClass = None
+        for speechId, line in enumerate(textList):
+            speaker, speech = self.splitSpeakerAndSpeech(line)
+            speakerClass = self.getSpeakerClass(speech, speaker, speakerClass)
+            rowId = 'row_%03d_%02d' % (sectionId, speechId)
+            rowList.append(self._makeRow(speakerClass, speaker, speech, rowId))
+
+        rowsText = "".join(rowList)
+
+        return self._makeSection(rowsText)
 
     def makeDocument(self, body):
         return f"""
@@ -114,8 +130,23 @@ class PageBuilder:
                 </td>
             </tr>"""
 
-def isWrapped(line, left, right):
-    return line[0] == left and line[-1] == right
+
+def compileSections(fd, builder, sectionNum):
+    sections = []
+    currentSection = []
+    for line in fd:
+        line = line.strip()
+        if line == '':
+            sections.append(builder.buildSection(currentSection, sectionNum))
+            sectionNum += 1
+            currentSection = []
+        else:
+            currentSection.append(line)
+
+    sections.append(builder.buildSection(currentSection, sectionNum))
+
+    return sections, sectionNum
+
 
 def extractDialogAsHtml(rootDir, outputDir, builder, tocTitle, getTitleFromFile=None):
     if not os.path.exists(outputDir):
@@ -123,19 +154,7 @@ def extractDialogAsHtml(rootDir, outputDir, builder, tocTitle, getTitleFromFile=
 
     sectionNum = 0
     for fn, fd in utils.loadFiles(rootDir):
-        sections = []
-        currentSection = []
-        for line in fd:
-            line = line.strip()
-            if line == '':
-                sections.append(builder.buildSection(currentSection, sectionNum))
-                sectionNum += 1
-                currentSection = []
-            else:
-                currentSection.append(line)
-
-        sections.append(builder.buildSection(currentSection, sectionNum))
-
+        sections, sectionNum = compileSections(fd, builder, sectionNum)
         sectionsText = "\n\n".join(sections)
         html = builder.makeDocument(sectionsText)
 
