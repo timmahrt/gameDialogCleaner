@@ -1,4 +1,3 @@
-
 import os
 import io
 import csv
@@ -8,11 +7,13 @@ from sudachipy import tokenizer, dictionary
 
 import utils
 
+
 def getChunks(words, size):
     retList = []
     for i in range(len(words) - (size - 1)):
-        retList.append(tuple(words[i: i + size]))
+        retList.append(tuple(words[i : i + size]))
     return retList
+
 
 def getFrequency(grams):
     retList = []
@@ -35,13 +36,13 @@ def pruneRareSequences(grams, minOccurance):
 def _output(outputDir, unigrams, bigrams, trigrams, fourgrams):
     print(outputDir)
     for fn, grams in [
-            ['unigrams.csv', unigrams],
-            ['bigrams.csv', bigrams],
-            ['trigrams.csv', trigrams],
-            ['fourgrams.csv', fourgrams]
+        ["unigrams.csv", unigrams],
+        ["bigrams.csv", bigrams],
+        ["trigrams.csv", trigrams],
+        ["fourgrams.csv", fourgrams],
     ]:
         gramOutList = getFrequency(grams)
-        if fn != 'unigrams.csv':
+        if fn != "unigrams.csv":
             gramOutList = pruneRareSequences(gramOutList, 2)
         gramOutList.sort()
         with io.open(os.path.join(outputDir, fn), "w", encoding="utf-8") as fd:
@@ -52,7 +53,7 @@ def _output(outputDir, unigrams, bigrams, trigrams, fourgrams):
 
 def extractDialogWithMecab(rootDir):
 
-    outputDir = utils.getOutputPath(rootDir, 'stats')
+    outputDir = utils.getOutputPath(rootDir, "stats")
     parser = MeCab.Tagger("-Owakati")
     unigrams = []
     bigrams = []
@@ -70,7 +71,7 @@ def extractDialogWithMecab(rootDir):
 
 
 def extractDialogWithSudachi(rootDir):
-    outputDir = utils.getOutputPath(rootDir, 'stats')
+    outputDir = utils.getOutputPath(rootDir, "stats")
     tokenizer_obj = dictionary.Dictionary().create()
     mode = tokenizer.Tokenizer.SplitMode.C
 
@@ -78,14 +79,7 @@ def extractDialogWithSudachi(rootDir):
     bigrams = []
     trigrams = []
     fourgrams = []
-    POS_LIST = [
-        '名詞',
-        '動詞',
-        '副詞',
-        '形容詞',
-        '連体詞',
-        '形状詞'
-    ]
+    POS_LIST = ["名詞", "動詞", "副詞", "形容詞", "連体詞", "形状詞"]
     for fn, fd in utils.loadFiles(rootDir):
         for line in fd:
             line = line.strip()
@@ -94,7 +88,9 @@ def extractDialogWithSudachi(rootDir):
                 if word.part_of_speech()[0] not in POS_LIST:
                     continue
                 wordList.append((word.dictionary_form(), word.part_of_speech()[0]))
-                print([word.surface(), word.dictionary_form(), word.part_of_speech()[0]])
+                print(
+                    [word.surface(), word.dictionary_form(), word.part_of_speech()[0]]
+                )
 
             unigrams.extend(getChunks(wordList, 1))
             bigrams.extend(getChunks(wordList, 2))
@@ -105,6 +101,6 @@ def extractDialogWithSudachi(rootDir):
 
 
 if __name__ == "__main__":
-    rootDir = 'ff8/cleaned/dialog/'
+    rootDir = "ff8/cleaned/dialog/"
     # extractDialogWithMecab(rootDir)
     extractDialogWithSudachi(rootDir)

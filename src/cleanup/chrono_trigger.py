@@ -1,14 +1,15 @@
-
 import io
 import os
 from os.path import join
 import re
 
 import utils
-yearRe = re.compile('[0-9]{3,}')
+
+yearRe = re.compile("[0-9]{3,}")
+
 
 def clean(rootFileName, outputPath):
-    '''
+    """
 
 
     Chrono triggers data is split by each location so
@@ -16,7 +17,7 @@ def clean(rootFileName, outputPath):
     is processed.  To avoid too much file fragmentation,
     if two physical locations occur in the same time
     period, they are merged into the same file.
-    '''
+    """
     if not os.path.exists(outputPath):
         os.mkdir(outputPath)
 
@@ -26,8 +27,9 @@ def clean(rootFileName, outputPath):
 
     for i, section in enumerate(sections):
         outputFn = getFileNameFromSection(i + 1, section)
-        with io.open(join(outputPath, outputFn), 'w', encoding="utf-8") as fd:
+        with io.open(join(outputPath, outputFn), "w", encoding="utf-8") as fd:
             fd.write(section)
+
 
 def cleanSectionScript(sections):
     cleanedSections = []
@@ -37,11 +39,11 @@ def cleanSectionScript(sections):
         section = condenseLines(section)
         section = isolateChoices(section)
         section = separateSpeakersAndSpeech(section)
-        section = section.replace('　', '') # Scrub whitespace
-        section = section.replace('[END]', '')
-        section = section.replace(':\n:', ':') # Happens sometimes
-        section = section.replace('「', '') # No longer needed
-        section = section.replace('\n [', '\n[')
+        section = section.replace("　", "")  # Scrub whitespace
+        section = section.replace("[END]", "")
+        section = section.replace(":\n:", ":")  # Happens sometimes
+        section = section.replace("「", "")  # No longer needed
+        section = section.replace("\n [", "\n[")
         section = fixDialogueSpacing(section)
         section = utils.simplifyLongNewlineSequences(section)
         section = utils.removeReundantSpeakers(section)
@@ -51,13 +53,14 @@ def cleanSectionScript(sections):
 
     return cleanedSections
 
+
 def simplifyWhitespace(section):
     newlineRe = re.compile("\n{3,}")
-    return newlineRe.sub('\n\n', section)
+    return newlineRe.sub("\n\n", section)
 
 
 def getYear(section):
-    firstLine = section.split('\n', 1)[0]
+    firstLine = section.split("\n", 1)[0]
     match = yearRe.search(firstLine)
     if match is None:
         return firstLine
@@ -75,14 +78,14 @@ def simpleCondenseLines(section):
             break
 
         start = match.start()
-        newlineToDeleteI = section.find('\n', start + 1)
-        section = section[:newlineToDeleteI] + section[newlineToDeleteI + 1:]
+        newlineToDeleteI = section.find("\n", start + 1)
+        section = section[:newlineToDeleteI] + section[newlineToDeleteI + 1 :]
 
     return section
 
 
 def condenseLines(section):
-    END_MARKER = 'END'
+    END_MARKER = "END"
     start = 0
     while True:
         i = section.find(END_MARKER, start)
@@ -91,24 +94,24 @@ def condenseLines(section):
 
         # Move backwards, eating as many newlines as possible
         while True:
-            prevEnd = section.rfind('\n', 0, i)
+            prevEnd = section.rfind("\n", 0, i)
             if prevEnd == -1:
                 break
 
-             # The 'END' marker applies to a speech quote in the existing context
-            if '「' in section[prevEnd:i]:
+            # The 'END' marker applies to a speech quote in the existing context
+            if "「" in section[prevEnd:i]:
                 break
-            prevStart = section.rfind('\n', 0, prevEnd)
+            prevStart = section.rfind("\n", 0, prevEnd)
             if prevStart == -1:
                 break
 
             prevLine = section[prevStart:prevEnd]
 
             if END_MARKER not in prevLine:
-                section = section[:prevEnd] + section[prevEnd + 1:]
+                section = section[:prevEnd] + section[prevEnd + 1 :]
                 i -= 1
 
-            if '[' in prevLine or '「' in prevLine:
+            if "[" in prevLine or "「" in prevLine:
                 break
 
         start = i + 1
@@ -122,11 +125,11 @@ def separateSpeakersAndSpeech(section):
     notWhitespaceRe = re.compile(r"^\D")
     for line in lines:
         if len(line) > 0:
-            if line.startswith(' ['):
-                line = line.lstrip(' [')
-                line = line.replace(']', ':', 1)
-            elif '「' in line:
-                line = line.replace('「', ':「')
+            if line.startswith(" ["):
+                line = line.lstrip(" [")
+                line = line.replace("]", ":", 1)
+            elif "「" in line:
+                line = line.replace("「", ":「")
             elif notWhitespaceRe.search(line) is not None:
                 line = f":{line}"
         retSection.append(line)
@@ -135,7 +138,7 @@ def separateSpeakersAndSpeech(section):
 
 
 def markChoices(section):
-    choiceMarker = '○'
+    choiceMarker = "○"
     choiceStartRe = re.compile(r"\n[^「 　\n][^「]+\n　{2,3}\S")
     start = 0
     while True:
@@ -143,13 +146,13 @@ def markChoices(section):
         if match is None:
             break
         start = match.start()
-        end = section.find('\n\n', start)
+        end = section.find("\n\n", start)
 
         i = 0
         while True:
-            i = section.find('　　　', start, end)
+            i = section.find("　　　", start, end)
             if i == -1:
-                i = section.find('　　', start, end)
+                i = section.find("　　", start, end)
                 if i == -1:
                     break
                 else:
@@ -164,23 +167,23 @@ def markChoices(section):
             break
 
     # Kindof a hack
-    section = section.replace('　　はい[END]', '　　○はい[END]')
-    section = section.replace('　　はい\n', '　　○はい\n')
-    section = section.replace('　　いいえ[END]', '　　○いいえ[END]')
-    section = section.replace('　　いいえ\n', '　　○いいえ\n')
+    section = section.replace("　　はい[END]", "　　○はい[END]")
+    section = section.replace("　　はい\n", "　　○はい\n")
+    section = section.replace("　　いいえ[END]", "　　○いいえ[END]")
+    section = section.replace("　　いいえ\n", "　　○いいえ\n")
 
     return section
 
 
 def isolateChoices(section):
-    choiceMarker = '○'
-    section = section.replace(choiceMarker, '\n' + choiceMarker)
-    return section 
+    choiceMarker = "○"
+    section = section.replace(choiceMarker, "\n" + choiceMarker)
+    return section
 
 
 def mergeSectionsByYear(sections):
     # Merge sections by year
-    sectionMarker = '＋＋'
+    sectionMarker = "＋＋"
     prevSection = sectionMarker + sections.pop(0)
     prevYear = getYear(prevSection)
     newSections = [prevSection]
@@ -197,22 +200,26 @@ def mergeSectionsByYear(sections):
 
     return newSections
 
+
 def getFileNameFromSection(i, section):
-    firstLine = section.split('\n', 1)[0].strip()
-    firstLine = firstLine.replace(' ', '_')
-    for char in ['.', ',', "'", '＋', '[', ']', '(', ')', '?', '/', ':']:
-        firstLine = firstLine.replace(char, '')
+    firstLine = section.split("\n", 1)[0].strip()
+    firstLine = firstLine.replace(" ", "_")
+    for char in [".", ",", "'", "＋", "[", "]", "(", ")", "?", "/", ":"]:
+        firstLine = firstLine.replace(char, "")
     firstLine = firstLine.strip()
 
     outputFn = "%03d_%s.txt" % (i, firstLine)
 
     return outputFn
 
+
 def getSegmentsForRootFile(rootFileName):
-    sectionRe = re.compile(r" \[[a-zA-Z0-9 ,.()/']+([0-9]{3,}|\?)[a-zA-Z ,.()]+\]|\[End of Time\]|\[Ending.*\]")
+    sectionRe = re.compile(
+        r" \[[a-zA-Z0-9 ,.()/']+([0-9]{3,}|\?)[a-zA-Z ,.()]+\]|\[End of Time\]|\[Ending.*\]"
+    )
 
     sections = []
-    with io.open(rootFileName, "r", encoding='utf-8') as fd:
+    with io.open(rootFileName, "r", encoding="utf-8") as fd:
         data = fd.read()
         start = 0
 
@@ -232,7 +239,7 @@ def getSegmentsForRootFile(rootFileName):
 
 
 def fixDialogueSpacing(section):
-    whitespaceRe = re.compile('\n\n(?!\n)')
-    section = whitespaceRe.sub('\n', section)
-    section = section.replace('\n[', '\n\n[')
+    whitespaceRe = re.compile("\n\n(?!\n)")
+    section = whitespaceRe.sub("\n", section)
+    section = section.replace("\n[", "\n\n[")
     return section

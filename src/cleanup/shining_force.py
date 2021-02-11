@@ -1,17 +1,17 @@
-
 import io
 import os
 import re
 
 import utils
 
+
 def clean(root, outputPath):
-    '''
+    """
     A little bit involved but with a bit of planning, it wasn't too difficult.
     Fortunately, three games all used the same formatting, so this function
     yielded a lot of text.
-    '''
-    END_OF_HEADER = 'TIMESTAMPS'
+    """
+    END_OF_HEADER = "TIMESTAMPS"
     nameRe = re.compile("\n{2,}.*?\n[（「１]")
 
     if not os.path.exists(outputPath):
@@ -24,7 +24,7 @@ def clean(root, outputPath):
         data = data[start:].lstrip()
 
         # Remove lines containing an arrow in them
-        data = removeLinesContaining(data, '→')
+        data = removeLinesContaining(data, "→")
 
         start = nameRe.search(data).start()
         preamble = getPreamble(data[:start])
@@ -33,20 +33,22 @@ def clean(root, outputPath):
         data = removeFooter(data)
 
         # Protect events by making them look like speech
-        data = data.replace('\n・', 'イベント\n「・')
-        data = data.replace('\n\n１．', '\n\n選択\n「１．')
+        data = data.replace("\n・", "イベント\n「・")
+        data = data.replace("\n\n１．", "\n\n選択\n「１．")
 
         epilogue = getEpilogue(data)
-        outputList = [preamble, ] + splitDataBySpeechEvent(data)
+        outputList = [
+            preamble,
+        ] + splitDataBySpeechEvent(data)
         outputList.append(epilogue)
-        outputData = "\n".join(outputList) + '\n'
-        outputData = outputData.replace('　', '') # Remove ideographic space
+        outputData = "\n".join(outputList) + "\n"
+        outputData = outputData.replace("　", "")  # Remove ideographic space
 
         outputData = setSpeakerBeforeDecisions(outputData)
 
         # Clean up the earlier protected 'events'
-        outputData = removePlaceholderSpeech(outputData, 'イベント:「・', '\n:・')
-        outputData = removePlaceholderSpeech(outputData, '選択:「１．', '\n:１．')
+        outputData = removePlaceholderSpeech(outputData, "イベント:「・", "\n:・")
+        outputData = removePlaceholderSpeech(outputData, "選択:「１．", "\n:１．")
 
         outputData = reduceWhitespaceBeforeNumbers(outputData)
         outputData = addColonBeforeDecisions(outputData)
@@ -63,7 +65,7 @@ def clean(root, outputPath):
 
 def replaceSpecialCharacters(outputData):
     numberRe = re.compile(":[１２３４５６７８９]．")
-    outputData = numberRe.sub(':○', outputData)
+    outputData = numberRe.sub(":○", outputData)
 
     locationRe = re.compile("^・", flags=re.MULTILINE)
     outputData = locationRe.sub("＋＋", outputData)
@@ -73,47 +75,51 @@ def replaceSpecialCharacters(outputData):
 
     return outputData
 
+
 def removeFooter(data):
     # Remove page footer
-    for text in ['?ﾔ戻る', '?ﾕシナリオ一覧']:
+    for text in ["?ﾔ戻る", "?ﾕシナリオ一覧"]:
         i = data.rfind(text)
         if i != -1:
             data = data[:i]
 
     return data
 
+
 def getPreamble(data):
     # Extract the chapter name and the subchapter location
     newlineRe = re.compile("\n{3,}")
     preamble = data
-    preamble = newlineRe.sub('\n\n', preamble)
-    preambleEnd = preamble.find('\n') + 1
-    preambleEnd = preamble.find('\n', preambleEnd) + 1
-    if preamble[preambleEnd + 1] != '・':
-        preamble = preamble[:preambleEnd] + '・' + preamble[preambleEnd:]
-    preambleEnd = preamble.find('\n', preambleEnd) + 1
+    preamble = newlineRe.sub("\n\n", preamble)
+    preambleEnd = preamble.find("\n") + 1
+    preambleEnd = preamble.find("\n", preambleEnd) + 1
+    if preamble[preambleEnd + 1] != "・":
+        preamble = preamble[:preambleEnd] + "・" + preamble[preambleEnd:]
+    preambleEnd = preamble.find("\n", preambleEnd) + 1
     preamble = preamble[:preambleEnd]
 
     return preamble
 
+
 def getEpilogue(data):
     # Isolate the epilogue (if there is one)
-    epilogueStart = data.rfind('「')
-    epilogueStart = data.find('\n\n\n', epilogueStart)
-    epilogue = ''
+    epilogueStart = data.rfind("「")
+    epilogueStart = data.find("\n\n\n", epilogueStart)
+    epilogue = ""
     if epilogueStart != -1:
-        epilogue = '\n\n' + data[epilogueStart:].strip()
+        epilogue = "\n\n" + data[epilogueStart:].strip()
         data = data[:epilogueStart]
 
     return epilogue
+
 
 def splitDataBySpeechEvent(data):
     numberRe = re.compile("\n{1,}[１２３４５６７８９]")
     nameRe = re.compile("\n{2,}.*?\n[（「１]")
     outputList = []
     while True:
-        nameStop = data.find('「')
-        nameStopAlt = data.find('（')
+        nameStop = data.find("「")
+        nameStopAlt = data.find("（")
         if nameStop == -1 and nameStopAlt == -1:
             break
         elif nameStop != -1 and nameStopAlt != -1:
@@ -125,7 +131,7 @@ def splitDataBySpeechEvent(data):
         # trim those, and consider the rest to be meaningful
         # (ie a pause between speech events)
         name = data[:nameStop]
-        name = name.replace('\n\n', '', 1)
+        name = name.replace("\n\n", "", 1)
         data = data[nameStop:]
 
         # Look for the next name.
@@ -142,7 +148,7 @@ def splitDataBySpeechEvent(data):
         speech = data[:speechStop]
 
         # Numbers look like text but show choice-based events
-        numbersText = ''
+        numbersText = ""
         match = numberRe.search(speech)
         if match:
             numbersIndex = match.start()
@@ -151,23 +157,22 @@ def splitDataBySpeechEvent(data):
 
         # Format the speech which may contain several speech
         # events in one sequence by the same speaker
-        speech = speech.replace('\n（', '\n:（')
-        speech = speech.replace('\n「', '」\n:「')
-        speech += '」'
-        speech = speech.replace('\n', '')
-        speech = speech.replace(':「', '\n:「')
-        speech = speech.replace('）」', '）') # Kindof gross, probably wrong
+        speech = speech.replace("\n（", "\n:（")
+        speech = speech.replace("\n「", "」\n:「")
+        speech += "」"
+        speech = speech.replace("\n", "")
+        speech = speech.replace(":「", "\n:「")
+        speech = speech.replace("）」", "）")  # Kindof gross, probably wrong
 
         outputList.append("%s:%s" % (name.rstrip(), speech.strip()))
 
         if numbersText:
-            i = numbersText.find('\n「')
+            i = numbersText.find("\n「")
             if i != -1:
                 speechStop -= len(numbersText) - i
                 numbersText = numbersText[:i]
 
             outputList.append(numbersText)
-
 
         data = data[speechStop:]
 
@@ -185,13 +190,16 @@ def setSpeakerBeforeDecisions(outputData):
         if match == None:
             break
         start = match.start()
-        if outputData[start - 1] != '\n':
-            prevLineStart = outputData.rfind('\n', 0, start)
+        if outputData[start - 1] != "\n":
+            prevLineStart = outputData.rfind("\n", 0, start)
             segment = outputData[prevLineStart:start]
-            if ':' not in segment and '・' not in segment: # The previous line contains no speech?
-                outputData = outputData[:start] + ':' + outputData[start + 1:]
+            if (
+                ":" not in segment and "・" not in segment
+            ):  # The previous line contains no speech?
+                outputData = outputData[:start] + ":" + outputData[start + 1 :]
         start += 2
     return outputData
+
 
 def reduceWhitespaceBeforeNumbers(outputData):
     # Some numbered choices have too much whitespace
@@ -203,10 +211,11 @@ def reduceWhitespaceBeforeNumbers(outputData):
             break
         start = match.start()
 
-        outputData = outputData[:start] + outputData[start + 1:]
+        outputData = outputData[:start] + outputData[start + 1 :]
         start = start - 1
 
     return outputData
+
 
 def addColonBeforeDecisions(outputData):
     newlineAndNumbersRe = re.compile("\n[１２３４５６７８９]")
@@ -217,10 +226,11 @@ def addColonBeforeDecisions(outputData):
             break
         start = match.start()
 
-        if outputData[start + 1] != ':':
-            outputData = outputData[:start + 1] + ":" + outputData[start + 1:]
+        if outputData[start + 1] != ":":
+            outputData = outputData[: start + 1] + ":" + outputData[start + 1 :]
 
     return outputData
+
 
 def removeLinesContaining(data, matchChar):
     start = 0
@@ -228,11 +238,12 @@ def removeLinesContaining(data, matchChar):
         stop = data.find(matchChar, start)
         if stop == -1:
             break
-        start = data.rfind('\n', start, stop)
-        stop = data.find('\n', start + 1)
+        start = data.rfind("\n", start, stop)
+        stop = data.find("\n", start + 1)
         data = data[:start] + data[stop:]
 
     return data
+
 
 def removePlaceholderSpeech(outputData, eventPlaceholder, replacement):
     start = 0
@@ -241,8 +252,8 @@ def removePlaceholderSpeech(outputData, eventPlaceholder, replacement):
         start = outputData.find(eventPlaceholder, start)
         if start == -1:
             break
-        end = outputData.find('」', start)
-        outputData = outputData[:end] + '\n' + outputData[end + 1:]
+        end = outputData.find("」", start)
+        outputData = outputData[:end] + "\n" + outputData[end + 1 :]
         start = end
     outputData = outputData.replace(eventPlaceholder, replacement)
 

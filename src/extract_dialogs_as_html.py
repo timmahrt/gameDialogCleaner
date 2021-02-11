@@ -1,4 +1,3 @@
-
 import os
 import io
 
@@ -6,49 +5,53 @@ import utils
 
 from bs4 import BeautifulSoup
 
-NON_FINAL_PUNCTUATION = '、〜'
-SENTENCE_FINAL_PUNCTUATION = '…。！？・'
+NON_FINAL_PUNCTUATION = "、〜"
+SENTENCE_FINAL_PUNCTUATION = "…。！？・"
+
 
 def extractDialog(rootDir):
 
-    outputDir = utils.getOutputPath(rootDir, 'dialog')
+    outputDir = utils.getOutputPath(rootDir, "dialog")
 
     for fn, fd in utils.loadFiles(rootDir):
         sentenceList = []
         for line in fd:
-            if ':「' not in line:
+            if ":「" not in line:
                 continue
-            line = line.split(':「')[1].rstrip().rstrip('」')
+            line = line.split(":「")[1].rstrip().rstrip("」")
 
             for punctuation in NON_FINAL_PUNCTUATION:
-                line = line.replace(punctuation, '')
+                line = line.replace(punctuation, "")
 
             tmpSentenceList = [line]
             for punctuation in SENTENCE_FINAL_PUNCTUATION:
                 subTmpSentenceList = []
                 for sentence in tmpSentenceList:
                     subTmpSentenceList.extend(sentence.split(punctuation))
-                tmpSentenceList = [line.strip() for line in subTmpSentenceList if line != '']
+                tmpSentenceList = [
+                    line.strip() for line in subTmpSentenceList if line != ""
+                ]
             sentenceList.extend(tmpSentenceList)
 
         with io.open(os.path.join(outputDir, fn), "w", encoding="utf-8") as fd:
             for line in sentenceList:
-                fd.write(line + '\n')
+                fd.write(line + "\n")
+
 
 class Builder:
 
-    SPEAKER_A = 'speaker_a'
-    SPEAKER_B = 'speaker_b'
-    SPEAKER = 'speaker'
-    CONTEXT = 'context'
-    CHOICE = 'choice'
+    SPEAKER_A = "speaker_a"
+    SPEAKER_B = "speaker_b"
+    SPEAKER = "speaker"
+    CONTEXT = "context"
+    CHOICE = "choice"
 
     def splitSpeakerAndSpeech(self, line):
-        if ':' in line:
-            speaker, line = line.split(':', 1)
+        if ":" in line:
+            speaker, line = line.split(":", 1)
             speaker = speaker.strip()
         else:
-            speaker = ''
+            speaker = ""
 
         return speaker, line
 
@@ -60,7 +63,7 @@ class Builder:
             speakerClass = Builder.CHOICE
         elif prevSpeakerClass in [Builder.CONTEXT, Builder.CHOICE]:
             speakerClass = Builder.SPEAKER_A
-        elif speaker != '':
+        elif speaker != "":
             if prevSpeakerClass == Builder.SPEAKER_A:
                 speakerClass = Builder.SPEAKER_B
             else:
@@ -72,22 +75,21 @@ class Builder:
         #     raise
         return speakerClass
 
-
     def isContext(self, line):
-        return '＋＋' in line
+        return "＋＋" in line
 
     def isChoice(self, line):
-        return line.startswith('○')
+        return line.startswith("○")
+
 
 class PageBuilder(Builder):
-
     def buildSection(self, textList, sectionId):
         rowList = []
         speakerClass = None
         for speechId, line in enumerate(textList):
             speaker, speech = self.splitSpeakerAndSpeech(line)
             speakerClass = self.getSpeakerClass(speech, speaker, speakerClass)
-            rowId = 'row_%03d_%02d' % (sectionId, speechId)
+            rowId = "row_%03d_%02d" % (sectionId, speechId)
             rowList.append(self._makeRow(speakerClass, speaker, speech, rowId))
 
         rowsText = "".join(rowList)
@@ -136,7 +138,7 @@ def compileSections(fd, builder, sectionNum):
     currentSection = []
     for line in fd:
         line = line.strip()
-        if line == '':
+        if line == "":
             sections.append(builder.buildSection(currentSection, sectionNum))
             sectionNum += 1
             currentSection = []
@@ -164,18 +166,19 @@ def extractDialogAsHtml(rootDir, outputDir, builder, tocTitle, getTitleFromFile=
 
     generateDirectoryListing(outputDir, tocTitle, getTitleFromFile)
 
+
 def getNameFromFirstLine(fn):
     line = None
     print(fn)
-    with io.open(fn, 'r', encoding='utf-8') as fd:
-        soup = BeautifulSoup(fd.read(), 'lxml')
-        table = soup.find('table')
-        line = table.find_all('td')[1].text
+    with io.open(fn, "r", encoding="utf-8") as fd:
+        soup = BeautifulSoup(fd.read(), "lxml")
+        table = soup.find("table")
+        line = table.find_all("td")[1].text
         line = line.strip()
-        line = line.strip('＋')
-        line = line.strip('○')
-        line = line.replace('[', '')
-        line = line.replace(']', '')
+        line = line.strip("＋")
+        line = line.strip("○")
+        line = line.replace("[", "")
+        line = line.replace("]", "")
         line = line.strip()
 
     return line
@@ -184,19 +187,21 @@ def getNameFromFirstLine(fn):
 def getNumSpeechEvents(fn):
     with io.open(fn, "r", encoding="utf-8") as fd:
         html = fd.read()
-        return html.count('speaker_a') + html.count('speaker_b')
+        return html.count("speaker_a") + html.count("speaker_b")
 
 
 def generateDirectoryListing(rootDir, tocTitle, getTitleFromFile=None):
-    dirList = [fn for fn in os.listdir(rootDir) if '.html' in fn and fn != 'index.html']
+    dirList = [fn for fn in os.listdir(rootDir) if ".html" in fn and fn != "index.html"]
     dirList.sort()
 
-    makeRow = lambda url, urlText, length: f"<div class='link_row'><div class='script_length_info'>{length}</div><div class='script_link'><a href='{url}'>{urlText}</a></div></div>"
+    makeRow = (
+        lambda url, urlText, length: f"<div class='link_row'><div class='script_length_info'>{length}</div><div class='script_link'><a href='{url}'>{urlText}</a></div></div>"
+    )
     pageTitle = f"<div class='title'> {tocTitle}</div>"
     homeLink = "<div class='section'><div class= 'link_row link_home'><a href='..'>Return home</></div></div>"
 
     linklessRowTemplate = "<div class='link_row'><div class='script_length_info'>%s</div><div class='script_link'>%s</div></div>"
-    tableHeader = linklessRowTemplate % ('# lines', '')
+    tableHeader = linklessRowTemplate % ("# lines", "")
     rowList = [pageTitle, tableHeader]
     totalNumSpeechEvents = 0
     for i, fn in enumerate(dirList):
@@ -230,7 +235,13 @@ if __name__ == "__main__":
     # extractDialogAsHtml('data/ff6/cleaned', 'data/ff6/html', PageBuilder(), 'Final Fantasy 6', getNameFromFirstLine)
     # extractDialogAsHtml('data/ff7/cleaned', 'data/ff7/html', PageBuilder(), 'Final Fantasy 7', getNameFromFirstLine)
     # extractDialogAsHtml('data/ff8/cleaned', 'data/ff8/html', PageBuilder(), 'Final Fantasy 8', getNameFromFirstLine)
-    extractDialogAsHtml('data/ff9/cleaned', 'data/ff9/html', PageBuilder(), 'Final Fantasy 9', getNameFromFirstLine)
+    extractDialogAsHtml(
+        "data/ff9/cleaned",
+        "data/ff9/html",
+        PageBuilder(),
+        "Final Fantasy 9",
+        getNameFromFirstLine,
+    )
 
     # extractDialogAsHtml('data/sf3s1/cleaned', 'data/sf3s1/html', PageBuilder(), 'Shining Force 3 (Scenario 1)', getNameFromFirstLine)
     # extractDialogAsHtml('data/sf3s2/cleaned', 'data/sf3s2/html', PageBuilder(), 'Shining Force 3 (Scenario 2)', getNameFromFirstLine)
